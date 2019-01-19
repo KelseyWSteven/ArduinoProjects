@@ -30,7 +30,7 @@ const int BRIGHTENING = 1;
 const int DARKENING = 2;
 
 // Harware constants
-const int LED_PIN = 12;    // Data pin for LEDs
+const int LED_PIN = 3;    // Data pin for LEDs
 const int TOTAL_LEDS = 7;   // Total LEDs in array
 const int START_INDEX = 1;  // Ignore Center LED due to metal housing. Use 0 for all 7 LEDs
 
@@ -94,10 +94,6 @@ void loop() {
   // Send Updates to lights
   strip.show();
   delay(LOOP_DELAY_TIME);  // Short delay before next cycle
-}
-
-void lightCycle() {
-  
 }
 
 void handleLightOff(int index) {
