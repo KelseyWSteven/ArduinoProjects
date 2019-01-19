@@ -30,15 +30,15 @@ const int BRIGHTENING = 1;
 const int DARKENING = 2;
 
 // Harware constants
-const int LED_PIN = 3;    // Data pin for LEDs
-const int TOTAL_LEDS = 7;   // Total LEDs in array
-const int START_INDEX = 1;  // Ignore Center LED due to metal housing. Use 0 for all 7 LEDs
+const int LED_PIN = 3; // Data pin for LEDs
+const int TOTAL_LEDS = 7; // Total LEDs in array
+const int START_INDEX = 1; // Ignore Center LED due to metal housing. Use 0 for all 7 LEDs
 
 // Color change constants
-const int HIGHEST_INTENSITY = 200;  // May want to decrease this if LEDs are too bright. Max: 255
-const int COLOR_CHANGE_SPEED = 1;   // Can increase for faster animation, but choppier color progression
-const int LOOP_DELAY_TIME = 20;     // Artificial delay between loop cycles in ms. Can increase for slower animation
-const int LED_STAGGER_TIME = 50;   // Time in msto stagger LED brightening/darkening cycles
+const int HIGHEST_INTENSITY = 200; // Can decrease this if LEDs are too bright. Max: 255
+const int COLOR_CHANGE_SPEED = 1; // Increase for faster animation, but choppier color progression
+const int LOOP_DELAY_TIME = 20; // Delay between loop cycles in ms. Increase for slower animation
+const int LED_STAGGER_TIME = 50; // Time in msto stagger LED brightening/darkening cycles
 
 /* ~~~~~~~~~~ Variables ~~~~~~~~~~ */
 
@@ -97,22 +97,25 @@ void loop() {
 }
 
 void handleLightOff(int index) {
-  // If we are on the first LED
+  // If we are on the first LED, turn it on & reset timer
   if (index == START_INDEX) {
-    lightState[index] = 1;
+    lightState[index] = BRIGHTENING;
     pickNewColor(index);
     startTimer = millis();  // Reset timer
     
-  } else if (index > START_INDEX) {
-    // If first LED is brightening
+  } else if (index > START_INDEX) { 
+    // All other LEDs: check if first LED is brightening
     if (lightState[START_INDEX] == BRIGHTENING) {
 
       // Check if enough time has passed to turn on this LED
       long intervalForIndex = LED_STAGGER_TIME * index;      
       if (millis() - startTimer >= intervalForIndex) {
-        lightState[index] = 1;
-        // Set to same color as first LED
-        updateFinalColor(index, finalColors[START_INDEX][0], finalColors[START_INDEX][1], finalColors[START_INDEX][2]);
+
+        // Turn on LED & set to same color as first LED        
+        lightState[index] = BRIGHTENING;
+        updateFinalColor(index, finalColors[START_INDEX][0], \
+                                finalColors[START_INDEX][1], \
+                                finalColors[START_INDEX][2]);
       }
     }
   } 
@@ -146,37 +149,39 @@ void pickNewColor(int index) {
 void setLightBlueColor(int index) {
   // Get random blue value with a min of 1, cutting out darkest blues 
   // (cuts out last 50 values if HIGHEST_INTENSITY is high enough to allow)
-  int loweredHighestIntensity = HIGHEST_INTENSITY * 0.75;
-  int loweredBlueMaxVal = loweredHighestIntensity - 50 + 1;
-  int highestBlueVal = (loweredBlueMaxVal > 1) ? loweredBlueMaxVal : loweredHighestIntensity + 1;
+  int loweredMaxVal = HIGHEST_INTENSITY * 0.75;
+  int blueMaxVal = loweredMaxVal - 50 + 1;
+  blueMaxVal = (blueMaxVal > 1) ? blueMaxVal : loweredMaxVal + 1;
   
-  updateFinalColor(index, random(0, 3), random(0, 3), random(5, highestBlueVal));
+  updateFinalColor(index, random(0, 3), random(0, 3), random(5, blueMaxVal));
 }
 
 void setGreenBlueColor(int index) {
   // Get random blue & green values from 0-HIGHEST_INTENSITY 
-  updateFinalColor(index, 0, random(0, HIGHEST_INTENSITY + 1), random(0, HIGHEST_INTENSITY + 1));
+  int maxVal =  HIGHEST_INTENSITY + 1;
+  updateFinalColor(index, 0, random(0, maxVal), random(0, maxVal));
 }
 
 void setRedPurpleBlueColor(int index) {
   // Get random red & blue values from 0-HIGHEST_INTENSITY 
-  updateFinalColor(index, random(0, HIGHEST_INTENSITY + 1), 0, random(0, HIGHEST_INTENSITY + 1));
+  int maxVal =  HIGHEST_INTENSITY + 1;
+  updateFinalColor(index, random(0, maxVal), 0, random(0, maxVal));
 }
 
 void setYellowOrangeRedColor(int index) {
   // Use low values to prevent green colors
-  int randGreen = random(0, 6);
+  int green = random(0, 6);
 
   // If green channel is over 0, ensure red channel is noticeably higher
   // to prevent creating colors more green than desired
-  const int increasedRedStart = randGreen + 20;
-  const int redRandStart = ((randGreen > 0) && (increasedRedStart <=  HIGHEST_INTENSITY)) ? increasedRedStart : 0;
+  int redMinVal = green + 20;
+  redMinVal = ((green > 0) && (redMinVal <=  HIGHEST_INTENSITY)) ? redMinVal : 0;
 
   // Cuts out last 75 red values if HIGHEST_INTENSITY is high enough to allow
-  const int loweredRedMaxVal = HIGHEST_INTENSITY - 75 + 1;
-  const int redRandMax = (loweredRedMaxVal >= redRandStart) ? loweredRedMaxVal : HIGHEST_INTENSITY + 1;
+  int redMaxVal = HIGHEST_INTENSITY - 75 + 1;
+  redMaxVal = (redMaxVal >= redMinVal) ? redMaxVal : HIGHEST_INTENSITY + 1;
 
-  updateFinalColor(index, random(redRandStart, redRandMax), randGreen, 0);
+  updateFinalColor(index, random(redMinVal, redMaxVal), green, 0);
 }
 
 void setGreenPurpleColor(int index) {
@@ -278,7 +283,8 @@ void handleDarkening(int index) {
   }
 }
 
-// Decrease the value by COLOR_CHANGE_SPEED while making sure we do not go below 0
+// Decrease the value previousColor by COLOR_CHANGE_SPEED 
+// while making sure we do not go below 0
 int getDarkeningValue(int previousColor) {
   int newColor = previousColor - COLOR_CHANGE_SPEED;
   newColor = (newColor > 0) ? newColor : 0;
