@@ -1,8 +1,11 @@
 /*
-Color Twinkle
+CycleFadeInOut
 By Kelsey Steven
 
-Made to run twinkle effects for a single Neopixel Jewel.
+Made to run effects for a single Neopixel Jewel. 
+
+Turns on each LED with a delay from the previous, starting at low values and increasing to max brightness. 
+LEDs then begin to fade out in the opposite sequence, each LED begins to darken with a delay from the previous.
 
 Before running, always make sure START_INDEX, LED_PIN, and TOTAL_LEDS 
 are set to the correct index, pin, and number of NeoPixels you're driving.
@@ -11,6 +14,7 @@ are set to the correct index, pin, and number of NeoPixels you're driving.
 
 #include <Adafruit_NeoPixel.h>
 
+/* ~~~~~~~~~~ Constants ~~~~~~~~~~ */
 
 // Constants for color palettes
 // Used to determine allowed ranges for red, green, and blue values
@@ -26,23 +30,30 @@ const int BRIGHTENING = 1;
 const int DARKENING = 2;
 
 // Harware constants
-const int LED_PIN = 12;  // Data pin for LEDs
-const int TOTAL_LEDS = 7; // Total LEDs in array
+const int LED_PIN = 12;    // Data pin for LEDs
+const int TOTAL_LEDS = 7;   // Total LEDs in array
 const int START_INDEX = 1;  // Ignore Center LED due to metal housing. Use 0 for all 7 LEDs
 
 // Color change constants
 const int HIGHEST_INTENSITY = 200;  // May want to decrease this if LEDs are too bright. Max: 255
 const int COLOR_CHANGE_SPEED = 1;   // Can increase for faster animation, but choppier color progression
-const int DELAY_TIME = 20;   // Artificial delay between loop cycles. Can increase for slower animation
+const int LOOP_DELAY_TIME = 20;     // Artificial delay between loop cycles in ms. Can increase for slower animation
+const int LED_STAGGER_TIME = 50;   // Time in msto stagger LED brightening/darkening cycles
+
+/* ~~~~~~~~~~ Variables ~~~~~~~~~~ */
 
 // Declare the Neopixel strip using settings for Jewel V7 RGB neopixels 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(TOTAL_LEDS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 // Light state tracking variables
-int lightPalette = GREEN_PURPLE;
+int lightPalette = GREEN_BLUE;
 int lightState[TOTAL_LEDS];
 int previousColors[TOTAL_LEDS][3];
 int finalColors[TOTAL_LEDS][3];
+unsigned long startTimer = 0;
+unsigned long endTimer = 0;
+
+/* ~~~~~~~~~~ Functions ~~~~~~~~~~ */
 
 void setup() {
   // Seed random for determining if light should breath or stay off
@@ -51,7 +62,6 @@ void setup() {
   // Neopixel initialization
   strip.begin();
 
-  // Turn off any LEDs before START_INDEX
   if (START_INDEX > 0) {
     for(int index = 0; index < START_INDEX; index++) {
       strip.setPixelColor(index, strip.Color(0, 0, 0));
@@ -83,24 +93,33 @@ void loop() {
 
   // Send Updates to lights
   strip.show();
-  delay(DELAY_TIME);  // Short delay before next cycle
+  delay(LOOP_DELAY_TIME);  // Short delay before next cycle
 }
 
-void handleLightOff(int index) {  
-  lightState[index] = 1;
-  pickNewColor(index);
+void lightCycle() {
+  
+}
 
-// Comment above & Uncomment below for more random off cycles
+void handleLightOff(int index) {
+  // If we are on the first LED
+  if (index == START_INDEX) {
+    lightState[index] = 1;
+    pickNewColor(index);
+    startTimer = millis();  // Reset timer
+    
+  } else if (index > START_INDEX) {
+    // If first LED is brightening
+    if (lightState[START_INDEX] == BRIGHTENING) {
 
-//  // Decide if light should turn on next cycle 
-//  if (random(0, 2) == 0) {
-//      lightState[index] = random(0, 2);
-//  }
-//  
-//  // Pick a color if applicable
-//  if (lightState[index] == 1) {
-//    pickNewColor(index);
-//  }
+      // Check if enough time has passed to turn on this LED
+      long intervalForIndex = LED_STAGGER_TIME * index;      
+      if (millis() - startTimer >= intervalForIndex) {
+        lightState[index] = 1;
+        // Set to same color as first LED
+        updateFinalColor(index, finalColors[START_INDEX][0], finalColors[START_INDEX][1], finalColors[START_INDEX][2]);
+      }
+    }
+  } 
 }
 
 void pickNewColor(int index) {
@@ -202,7 +221,23 @@ void handleBrightening(int index) {
   
   // Check if light should start darken cycle next & update state if so
   if (red == maxRed && green == maxGreen && blue == maxBlue) {
-    lightState[index] = DARKENING;
+    
+    // If we are on last LED, start the darkening cycle
+    if (index == (TOTAL_LEDS - 1)) {
+      lightState[index] = DARKENING;
+      endTimer = millis();  // Reset timer
+      
+    } else {
+      // If the last LED is darkening, see if we should start to darken
+      if (lightState[TOTAL_LEDS - 1] == DARKENING) {
+        
+        // Check the timer and see if LED should start darkening
+        long intervalForIndex = LED_STAGGER_TIME * (TOTAL_LEDS - index - 1);      
+        if (millis() - endTimer >= intervalForIndex) {
+          lightState[index] = DARKENING;
+        }
+      }
+    }
   }
 }
 
@@ -241,12 +276,9 @@ void handleDarkening(int index) {
   strip.setPixelColor(index, strip.Color(red, green, blue));
   updatePreviousColor(index, red, green, blue);
   
-  // Check if light turned off
+  // Check if light should turn off
   if (red == 0 && green == 0 && blue == 0) {
     handleLightOff(index);
-
-//    lightState[index] = OFF;
-//    updateFinalColor(index, 0, 0, 0);
   }
 }
 
