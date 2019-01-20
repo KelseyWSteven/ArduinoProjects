@@ -87,18 +87,19 @@ void loop() {
 }
 
 void handleLightOff(int index) {  
-  lightState[index] = 1;
+  lightState[index] = BRIGHTENING;
   pickNewColor(index);
 
 // Comment above & Uncomment below for more random off cycles
 
-//  // Decide if light should turn on next cycle 
-//  if (random(0, 2) == 0) {
-//      lightState[index] = random(0, 2);
+//  // Decide if light should turn on next cycle
+//  let turnOn = random(0, 5); 
+//  if (turnOn == 0) {
+//      lightState[index] = BRIGHTENING;
 //  }
 //  
 //  // Pick a color if applicable
-//  if (lightState[index] == 1) {
+//  if (lightState[index] == BRIGHTENING) {
 //    pickNewColor(index);
 //  }
 }
@@ -131,37 +132,39 @@ void pickNewColor(int index) {
 void setLightBlueColor(int index) {
   // Get random blue value with a min of 1, cutting out darkest blues 
   // (cuts out last 50 values if HIGHEST_INTENSITY is high enough to allow)
-  int loweredHighestIntensity = HIGHEST_INTENSITY * 0.75;
-  int loweredBlueMaxVal = loweredHighestIntensity - 50 + 1;
-  int highestBlueVal = (loweredBlueMaxVal > 1) ? loweredBlueMaxVal : loweredHighestIntensity + 1;
+  int loweredMaxVal = HIGHEST_INTENSITY * 0.75;
+  int blueMaxVal = loweredMaxVal - 50 + 1;
+  blueMaxVal = (blueMaxVal > 1) ? blueMaxVal : loweredMaxVal + 1;
   
-  updateFinalColor(index, random(0, 3), random(0, 3), random(5, highestBlueVal));
+  updateFinalColor(index, random(0, 3), random(0, 3), random(5, blueMaxVal));
 }
 
 void setGreenBlueColor(int index) {
   // Get random blue & green values from 0-HIGHEST_INTENSITY 
-  updateFinalColor(index, 0, random(0, HIGHEST_INTENSITY + 1), random(0, HIGHEST_INTENSITY + 1));
+  int maxVal =  HIGHEST_INTENSITY + 1;
+  updateFinalColor(index, 0, random(0, maxVal), random(0, maxVal));
 }
 
 void setRedPurpleBlueColor(int index) {
   // Get random red & blue values from 0-HIGHEST_INTENSITY 
-  updateFinalColor(index, random(0, HIGHEST_INTENSITY + 1), 0, random(0, HIGHEST_INTENSITY + 1));
+  int maxVal =  HIGHEST_INTENSITY + 1;
+  updateFinalColor(index, random(0, maxVal), 0, random(0, maxVal));
 }
 
 void setYellowOrangeRedColor(int index) {
   // Use low values to prevent green colors
-  int randGreen = random(0, 6);
+  int green = random(0, 6);
 
   // If green channel is over 0, ensure red channel is noticeably higher
   // to prevent creating colors more green than desired
-  const int increasedRedStart = randGreen + 20;
-  const int redRandStart = ((randGreen > 0) && (increasedRedStart <=  HIGHEST_INTENSITY)) ? increasedRedStart : 0;
+  int redMinVal = green + 20;
+  redMinVal = ((green > 0) && (redMinVal <=  HIGHEST_INTENSITY)) ? redMinVal : 0;
 
   // Cuts out last 75 red values if HIGHEST_INTENSITY is high enough to allow
-  const int loweredRedMaxVal = HIGHEST_INTENSITY - 75 + 1;
-  const int redRandMax = (loweredRedMaxVal >= redRandStart) ? loweredRedMaxVal : HIGHEST_INTENSITY + 1;
+  int redMaxVal = HIGHEST_INTENSITY - 75 + 1;
+  redMaxVal = (redMaxVal >= redMinVal) ? redMaxVal : HIGHEST_INTENSITY + 1;
 
-  updateFinalColor(index, random(redRandStart, redRandMax), randGreen, 0);
+  updateFinalColor(index, random(redMinVal, redMaxVal), green, 0);
 }
 
 void setGreenPurpleColor(int index) {
